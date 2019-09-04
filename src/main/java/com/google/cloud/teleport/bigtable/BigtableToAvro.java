@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Google Inc.
+ * Copyright (C) 2019 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -20,12 +20,9 @@ import com.google.bigtable.v2.Cell;
 import com.google.bigtable.v2.Column;
 import com.google.bigtable.v2.Family;
 import com.google.bigtable.v2.Row;
+import com.google.cloud.teleport.util.BytesUtils;
 import com.google.cloud.teleport.util.DualInputNestedValueProvider;
 import com.google.cloud.teleport.util.DualInputNestedValueProvider.TranslatorInput;
-import com.google.protobuf.ByteOutput;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.UnsafeByteOperations;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -135,68 +132,20 @@ public class BigtableToAvro {
   static class BigtableToAvroFn extends SimpleFunction<Row, BigtableRow> {
     @Override
     public BigtableRow apply(Row row) {
-      ByteBuffer key = ByteBuffer.wrap(toByteArray(row.getKey()));
+      ByteBuffer key = ByteBuffer.wrap(BytesUtils.toByteArray(row.getKey()));
       List<BigtableCell> cells = new ArrayList<>();
       for (Family family : row.getFamiliesList()) {
         String familyName = family.getName();
         for (Column column : family.getColumnsList()) {
-          ByteBuffer qualifier = ByteBuffer.wrap(toByteArray(column.getQualifier()));
+          ByteBuffer qualifier = ByteBuffer.wrap(BytesUtils.toByteArray(column.getQualifier()));
           for (Cell cell : column.getCellsList()) {
             long timestamp = cell.getTimestampMicros();
-            ByteBuffer value = ByteBuffer.wrap(toByteArray(cell.getValue()));
+            ByteBuffer value = ByteBuffer.wrap(BytesUtils.toByteArray(cell.getValue()));
             cells.add(new BigtableCell(familyName, qualifier, timestamp, value));
           }
         }
       }
       return new BigtableRow(key, cells);
-    }
-  }
-
-  /**
-   * Extracts the byte array from the given {@link ByteString} without copy.
-   *
-   * @param byteString A {@link ByteString} from which to extract the array.
-   * @return an array of byte.
-   */
-  private static byte[] toByteArray(final ByteString byteString) {
-    try {
-      ZeroCopyByteOutput byteOutput = new ZeroCopyByteOutput();
-      UnsafeByteOperations.unsafeWriteTo(byteString, byteOutput);
-      return byteOutput.bytes;
-    } catch (IOException e) {
-      return byteString.toByteArray();
-    }
-  }
-
-  private static final class ZeroCopyByteOutput extends ByteOutput {
-    private byte[] bytes;
-
-    @Override
-    public void writeLazy(byte[] value, int offset, int length) {
-      if (offset != 0 || length != value.length) {
-        throw new UnsupportedOperationException();
-      }
-      bytes = value;
-    }
-
-    @Override
-    public void write(byte value) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void write(byte[] value, int offset, int length) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void write(ByteBuffer value) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void writeLazy(ByteBuffer value) {
-      throw new UnsupportedOperationException();
     }
   }
 }

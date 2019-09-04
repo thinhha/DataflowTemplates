@@ -16,6 +16,7 @@
 
 package com.google.cloud.teleport.bigtable;
 
+import com.google.api.services.bigquery.model.TableRow;
 import com.google.bigtable.v2.Cell;
 import com.google.bigtable.v2.Column;
 import com.google.bigtable.v2.Family;
@@ -115,6 +116,30 @@ final class TestUtils {
     BigtableCell cell =
         new BigtableCell(family, toByteBuffer(qualifier), timestamp, toByteBuffer(value));
     row.getCells().add(cell);
+  }
+
+  static TableRow createTableRow(String key) {
+    return new TableRow().set("key", key);
+  }
+
+  static TableRow createTableRowCell(
+          String family, String qualifier, String timestamp, String value) {
+    return new TableRow().set("family", family)
+      .set("qualifier", qualifier)
+      .set("timestamp", timestamp)
+      .set("value", value);
+  }
+
+  static TableRow createTableRow(ByteBuffer key) {
+    return new TableRow().set("key", key);
+  }
+
+  static TableRow createTableRowCell(
+          String family, ByteBuffer qualifier, String timestamp, ByteBuffer value) {
+    return new TableRow().set("family", family)
+            .set("qualifier", qualifier)
+            .set("timestamp", timestamp)
+            .set("value", value);
   }
 
   static ByteString toByteString(String string) {
